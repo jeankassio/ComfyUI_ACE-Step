@@ -18,6 +18,7 @@ from ace_step.language_segmentation import LangSegment
 from ace_step.ace_models.lyrics_utils.lyric_tokenizer import VoiceBpeTokenizer
 from ace_step.apg_guidance import apg_forward, MomentumBuffer, cfg_forward, cfg_zero_star, cfg_double_condition_forward
 from ace_step.cpu_offload import cpu_offload
+from ace_step.torch_utils import safe_cuda_empty_cache
 
 SUPPORT_LANGUAGES = {
     "en": 259, "de": 260, "fr": 262, "es": 284, "it": 285, 
@@ -83,7 +84,7 @@ class ACEStepPipeline:
         self.text_encoder_model = None
         self.text_tokenizer = None
         gc.collect()
-        torch.cuda.empty_cache()
+        safe_cuda_empty_cache()
 
     @cpu_offload("text_encoder_model")
     def get_text_embeddings(self, texts, device, text_max_length=256):

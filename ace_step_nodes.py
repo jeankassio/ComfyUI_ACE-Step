@@ -17,17 +17,16 @@ if current_dir not in sys.path:
 from ace_step.pipeline_ace_step import ACEStepPipeline as AP
 from ace_step.music_dcae.music_dcae_pipeline import MusicDCAE
 from ace_step.ace_models.ace_step_transformer import ACEStepTransformer2DModel
+from ace_step.torch_utils import safe_torch_compile, setup_torch_backends, get_optimal_device, get_optimal_dtype
+from ace_step.audio_utils import save_audio_safe
 
 import folder_paths
 cache_dir = folder_paths.get_temp_directory()
 models_dir = folder_paths.models_dir
 model_path = os.path.join(models_dir, "TTS", "ACE-Step-v1-3.5B")
 
-torch.backends.cudnn.benchmark = False
-torch.set_float32_matmul_precision('high')
-torch.backends.cudnn.deterministic = True
-torch.backends.cuda.matmul.allow_tf32 = True
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# Setup PyTorch backends with Windows compatibility
+setup_torch_backends()
 
 
 def cache_audio_tensor(
@@ -46,7 +45,7 @@ def cache_audio_tensor(
         ) as tmp_file:
             temp_filepath = tmp_file.name
         
-        torchaudio.save(temp_filepath, audio_tensor, sample_rate)
+        save_audio_safe(temp_filepath, audio_tensor, sample_rate)
 
         return temp_filepath
     except Exception as e:
@@ -244,9 +243,9 @@ class ACEModelLoader:
         text_tokenizer = AutoTokenizer.from_pretrained(text_encoder_checkpoint)
 
         if torch_compile:
-            music_dcae = torch.compile(music_dcae)
-            ace_step_transformer = torch.compile(ace_step_transformer)
-            text_encoder_model = torch.compile(text_encoder_model)
+            music_dcae = safe_torch_compile(music_dcae, enable_compile=True)
+            ace_step_transformer = safe_torch_compile(ace_step_transformer, enable_compile=True)
+            text_encoder_model = safe_torch_compile(text_encoder_model, enable_compile=True)
 
         elif quantized:
             from torchao.quantization import (
@@ -257,9 +256,9 @@ class ACEModelLoader:
             group_size = 128
             use_hqq = True
 
-            music_dcae = torch.compile(music_dcae)
-            ace_step_transformer = torch.compile(ace_step_transformer)
-            text_encoder_model = torch.compile(text_encoder_model)
+            music_dcae = safe_torch_compile(music_dcae, enable_compile=True)
+            ace_step_transformer = safe_torch_compile(ace_step_transformer, enable_compile=True)
+            text_encoder_model = safe_torch_compile(text_encoder_model, enable_compile=True)
             
             quant_ace_path = os.path.join(ace_step_checkpoint, "diffusion_pytorch_model_int4wo.bin")
             if not os.path.exists(quant_ace_path):

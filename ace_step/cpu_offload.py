@@ -1,6 +1,7 @@
 import torch
 import functools
 from typing import Callable, TypeVar
+from ace_step.torch_utils import safe_cuda_empty_cache, safe_cuda_synchronize
 
 
 class CpuOffloader:
@@ -17,9 +18,8 @@ class CpuOffloader:
     def __exit__(self, *args):
         if not hasattr(self.model,"torchao_quantized"):
             self.model.to("cpu")
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
+        safe_cuda_empty_cache()
+        safe_cuda_synchronize()
 
 
 T = TypeVar('T')

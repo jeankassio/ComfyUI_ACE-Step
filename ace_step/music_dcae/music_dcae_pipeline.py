@@ -21,6 +21,11 @@ try:
 except ImportError:
     from .music_vocoder import ADaMoSHiFiGANV1
 
+try:
+    from ace_step.audio_utils import load_audio_safe_stereo, save_audio_safe
+except ImportError:
+    from .audio_utils import load_audio_safe_stereo, save_audio_safe
+
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_PRETRAINED_PATH = os.path.join(root_dir, "checkpoints", "music_dcae_f8c8")
@@ -60,9 +65,7 @@ class MusicDCAE(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         self.shift_factor = -1.9091
 
     def load_audio(self, audio_path):
-        audio, sr = torchaudio.load(audio_path)
-        if audio.shape[0] == 1:
-            audio = audio.repeat(2, 1)
+        audio, sr = load_audio_safe_stereo(audio_path)
         return audio, sr
 
     def forward_mel(self, audios):
@@ -362,7 +365,7 @@ class MusicDCAE(ModelMixin, ConfigMixin, FromOriginalModelMixin):
 
 if __name__ == "__main__":
 
-    audio, sr = torchaudio.load("test.wav")
+    audio, sr = load_audio_safe_stereo("test.wav")
     audio_lengths = torch.tensor([audio.shape[1]])
     audios = audio.unsqueeze(0)
 
@@ -378,5 +381,5 @@ if __name__ == "__main__":
     print("latents shape: ", latents.shape)
     print("latent_lengths: ", latent_lengths)
     print("sr: ", sr)
-    torchaudio.save("test_reconstructed.wav", pred_wavs[0], sr)
+    save_audio_safe("test_reconstructed.wav", pred_wavs[0], sr)
     print("test_reconstructed.wav")

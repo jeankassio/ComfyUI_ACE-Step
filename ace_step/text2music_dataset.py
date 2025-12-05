@@ -13,6 +13,11 @@ from acestep.language_segmentation import LangSegment
 from acestep.models.lyrics_utils.lyric_tokenizer import VoiceBpeTokenizer
 import warnings
 
+try:
+    from ace_step.audio_utils import load_audio_safe_stereo
+except ImportError:
+    from .audio_utils import load_audio_safe_stereo
+
 warnings.simplefilter("ignore", category=FutureWarning)
 
 DEFAULT_TRAIN_PATH = "./data/example_dataset"
@@ -398,7 +403,7 @@ class Text2MusicDataset(Dataset):
         filename = item["filename"]
         sr = 48000
         try:
-            audio, sr = torchaudio.load(filename)
+            audio, sr = load_audio_safe_stereo(filename, sr=sr)
         except Exception as e:
             logger.error(f"Failed to load audio {item}: {e}")
             return None
@@ -407,10 +412,7 @@ class Text2MusicDataset(Dataset):
             logger.error(f"Failed to load audio {item}")
             return None
 
-        # Convert mono to stereo if needed
-        if audio.shape[0] == 1:
-            audio = torch.cat([audio, audio], dim=0)
-
+        # Already stereo from load_audio_safe_stereo
         # Take first two channels if more than stereo
         audio = audio[:2]
 
